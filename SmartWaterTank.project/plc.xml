@@ -1,0 +1,176 @@
+<?xml version='1.0' encoding='utf-8'?>
+<project xmlns="http://www.plcopen.org/xml/tc6_0201" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:ns1="http://www.plcopen.org/xml/tc6.xsd">
+  <fileHeader companyName="Unknown" productName="Unnamed" productVersion="1" creationDateTime="2025-05-27T12:55:18"/>
+  <contentHeader name="Unnamed" modificationDateTime="2025-05-27T13:02:00">
+    <coordinateInfo>
+      <fbd>
+        <scaling x="10" y="10"/>
+      </fbd>
+      <ld>
+        <scaling x="10" y="10"/>
+      </ld>
+      <sfc>
+        <scaling x="10" y="10"/>
+      </sfc>
+    </coordinateInfo>
+  </contentHeader>
+  <types>
+    <dataTypes/>
+    <pous>
+      <pou name="program0" pouType="program">
+        <interface>
+          <localVars>
+            <variable name="tankLevel">
+              <type>
+                <INT/>
+              </type>
+              <initialValue>
+                <simpleValue value="50"/>
+              </initialValue>
+            </variable>
+            <variable name="flowRate">
+              <type>
+                <INT/>
+              </type>
+              <initialValue>
+                <simpleValue value="15"/>
+              </initialValue>
+            </variable>
+            <variable name="currentHour">
+              <type>
+                <INT/>
+              </type>
+              <initialValue>
+                <simpleValue value="12"/>
+              </initialValue>
+            </variable>
+            <variable name="maintenanceMode">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="pumpCmd">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="lowFlowAlarm">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="overflowAlarm">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="offPeakActive">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="pumpEnable">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="timerInput">
+              <type>
+                <BOOL/>
+              </type>
+              <initialValue>
+                <simpleValue value="FALSE"/>
+              </initialValue>
+            </variable>
+            <variable name="flowTimer">
+              <type>
+                <derived name="TON"/>
+              </type>
+            </variable>
+          </localVars>
+        </interface>
+        <body>
+          <ST>
+            <xhtml:p><![CDATA[PROGRAM program0
+VAR
+    tankLevel : INT := 50;
+    flowRate : INT := 15;
+    maintenanceMode : BOOL := FALSE;
+    currentHour : INT := 12;
+    
+    pumpCmd : BOOL := FALSE;
+    lowFlowAlarm : BOOL := FALSE;
+    overflowAlarm : BOOL := FALSE;
+    
+    offPeakActive : BOOL := FALSE;
+    pumpEnable : BOOL := FALSE;
+    flowTimer : TON;
+    timerInput : BOOL := FALSE;
+END_VAR
+
+BEGIN
+    (* Off-peak hours check 10 PM to 6 AM *)
+    offPeakActive := (currentHour >= 22) OR (currentHour < 6);
+    
+    (* Tank level control logic *)
+    IF (tankLevel < 30) AND offPeakActive AND NOT maintenanceMode THEN
+        pumpEnable := TRUE;
+    END_IF;
+    
+    IF (tankLevel > 80) OR maintenanceMode OR NOT offPeakActive THEN
+        pumpEnable := FALSE;
+    END_IF;
+    
+    (* Critical overflow safety *)
+    IF tankLevel > 95 THEN
+        pumpEnable := FALSE;
+        overflowAlarm := TRUE;
+    ELSE
+        overflowAlarm := FALSE;
+    END_IF;
+    
+    (* Low flow monitoring *)
+    timerInput := pumpEnable AND (flowRate < 10);
+    flowTimer(IN := timerInput, PT := T#5M);
+    lowFlowAlarm := flowTimer.Q;
+    
+    (* Final pump command *)
+    pumpCmd := pumpEnable AND NOT overflowAlarm AND NOT maintenanceMode;
+
+END_PROGRAM
+]]></xhtml:p>
+          </ST>
+        </body>
+      </pou>
+    </pous>
+  </types>
+  <instances>
+    <configurations>
+      <configuration name="Config0">
+        <resource name="Res0">
+          <task name="task0" priority="0" interval="T#20ms">
+            <pouInstance name="instance0" typeName="program0"/>
+          </task>
+        </resource>
+      </configuration>
+    </configurations>
+  </instances>
+</project>
